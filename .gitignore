@@ -1,0 +1,28 @@
+# Visual Studio
+.vs/
+*.vcxproj
+*.vcxproj.filters
+*.sln
+*.user
+
+# Build files
+build/
+*.ninja
+.ninja_deps
+.ninja_log
+
+# User-specific files
+*.suo
+*.user
+*.user.*
+*.opensdf
+
+# Executables
+*.exe
+*.dll
+
+# Libraries
+/libs/
+
+# vcpkg
+vcpkg_installed/ 
