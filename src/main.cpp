@@ -1,7 +1,7 @@
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <Cpp/FastNoiseLite.h>
+#include <FastNoiseLite.h>
 #include "Shader.h"
 #include "Icosphere.h"
 #include "Camera.h"
@@ -15,7 +15,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 
@@ -80,21 +80,25 @@ int main()
     Shader moonShader("shaders/planet.vert", "shaders/moon.frag");
 
     // Create planet with ultra-high detail - SCALED UP 2X
-    Icosphere planet(2.0f, 7); // Was 1.0f, now 2.0f
+    Icosphere planet(2.0f, 8); // Increased subdivisions for higher resolution
     
     // Configure terrain generation for EXTREME GEOLOGICAL DETAIL
-    terrainConfig.continentAmplitude = 0.25f;  // Dramatic continental shelves
-    terrainConfig.continentFrequency = 0.4f;   // Larger continents with deep ocean basins
-    terrainConfig.mountainAmplitude = 0.6f;    // MASSIVE mountain ranges (Himalaya-scale)
-    terrainConfig.mountainFrequency = 1.8f;    // Mountain chains across continents
-    terrainConfig.hillAmplitude = 0.3f;        // Significant hill systems
-    terrainConfig.hillFrequency = 3.2f;        // Rolling hill country
-    terrainConfig.detailAmplitude = 0.15f;     // Dramatic surface features (canyons, gorges)
-    terrainConfig.detailFrequency = 6.5f;      // Dense geological detail
-    terrainConfig.oceanLevel = 0.1f;           // Deeper oceans for contrast
-    terrainConfig.maxElevation = 0.8f;         // Extreme elevation range (Everest-scale)
+    terrainConfig.continentAmplitude = 0.35f;  // Even more dramatic continental shelves
+    terrainConfig.continentFrequency = 0.6f;   // More continents
+    terrainConfig.mountainAmplitude = 1.0f;    // Even larger mountain ranges
+    terrainConfig.mountainFrequency = 2.5f;    // More mountain chains
+    terrainConfig.hillAmplitude = 0.5f;        // More pronounced hills
+    terrainConfig.hillFrequency = 4.5f;        // Denser hills
+    terrainConfig.detailAmplitude = 0.25f;     // More dramatic surface features
+    terrainConfig.detailFrequency = 10.0f;     // Even denser geological detail
+    terrainConfig.oceanLevel = 0.08f;          // Slightly deeper oceans
+    terrainConfig.maxElevation = 1.2f;         // Higher elevation range
     
     planet.generateTerrain(terrainConfig);
+    
+    // Procedural flora and fauna generation
+    GenerateProceduralPlants(&planet, terrainConfig);
+    GenerateProceduralAnimals(&planet, terrainConfig);
     
     // Create atmosphere and cloud spheres - SCALED UP 2X
     Icosphere atmosphere(2.1f, 4); // Was 1.05f, now 2.1f (slightly larger than planet)
@@ -636,11 +640,13 @@ void processInput(GLFWwindow *window)
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
+    (void)window; // Suppress unused parameter warning
     glViewport(0, 0, width, height);
 }
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
+    (void)window; // Suppress unused parameter warning
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
 
@@ -661,5 +667,7 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    camera.ProcessMouseScroll(yoffset);
+    (void)window; // Suppress unused parameter warning
+    (void)xoffset; // Suppress unused parameter warning
+    camera.ProcessMouseScroll(static_cast<float>(yoffset));
 } 

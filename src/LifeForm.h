@@ -159,7 +159,7 @@ public:
     const std::vector<Organism>& getAllOrganisms() const { return organisms; }
     const std::vector<EcosystemNiche>& getEcosystems() const { return ecosystems; }
     float getTotalBiomass() const;
-    int getSpeciesCount() const { return organisms.size(); }
+    int getSpeciesCount() const { return static_cast<int>(organisms.size()); }
     float getAverageComplexity() const;
     std::string getEvolutionStatus() const;
     

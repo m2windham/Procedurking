@@ -1,7 +1,7 @@
 #include "CelestialBody.h"
 #include <glad/glad.h>
 #include <cmath>
-#include <libs/FastNoiseLite.h>
+#include <FastNoiseLite.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

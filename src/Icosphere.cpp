@@ -1,5 +1,5 @@
 #include "Icosphere.h"
-#include <Cpp/FastNoiseLite.h>
+#include <FastNoiseLite.h>
 #include <cmath>
 #include <map>
 #include <algorithm>
@@ -27,36 +27,35 @@ void Icosphere::generateTerrain(const TerrainConfig& config)
     // Create noise generators with proper Earth-like parameters
     FastNoiseLite continentNoise;
     continentNoise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    continentNoise.SetFrequency(0.8f); // Large continent features
+    continentNoise.SetFrequency(config.continentFrequency); // Large continent features
     continentNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
     continentNoise.SetFractalOctaves(4);
 
     FastNoiseLite oceanNoise;
     oceanNoise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    oceanNoise.SetFrequency(1.2f); // Ocean basin features
+    oceanNoise.SetFrequency(config.continentFrequency * 1.5f); // Ocean basin features
     oceanNoise.SetFractalOctaves(3);
 
     FastNoiseLite mountainNoise;
     mountainNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    mountainNoise.SetFrequency(3.0f);
+    mountainNoise.SetFrequency(config.mountainFrequency);
     mountainNoise.SetFractalType(FastNoiseLite::FractalType_Ridged);
     mountainNoise.SetFractalOctaves(5);
 
     FastNoiseLite hillNoise;
     hillNoise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    hillNoise.SetFrequency(6.0f);
+    hillNoise.SetFrequency(config.hillFrequency);
     hillNoise.SetFractalType(FastNoiseLite::FractalType_FBm);
     hillNoise.SetFractalOctaves(3);
 
     FastNoiseLite detailNoise;
     detailNoise.SetNoiseType(FastNoiseLite::NoiseType_OpenSimplex2);
-    detailNoise.SetFrequency(12.0f);
+    detailNoise.SetFrequency(config.detailFrequency);
     detailNoise.SetFractalOctaves(2);
 
     for (size_t i = 0; i < vertices.size(); ++i)
     {
         glm::vec3 spherePos = glm::normalize(vertices[i]);
-        
         float x = spherePos.x;
         float y = spherePos.y;
         float z = spherePos.z;
@@ -64,75 +63,73 @@ void Icosphere::generateTerrain(const TerrainConfig& config)
         // Generate continent mask - this determines land vs ocean
         float continentValue = continentNoise.GetNoise(x, y, z);
         float oceanValue = oceanNoise.GetNoise(x * 0.5f, y * 0.5f, z * 0.5f);
-        
-        // Combine continent and ocean noise for realistic distribution
         float landMask = (continentValue * 0.7f + oceanValue * 0.3f + 0.1f);
-        
-        // Create realistic Earth-like land/ocean ratio (about 30% land, 70% ocean)
-        bool isLand = landMask > 0.1f;
-        
+        bool isLand = landMask > config.oceanLevel;
+
         float elevation = 0.0f;
-        
+
         if (isLand) {
             // LAND GENERATION
-            
-            // Base land elevation
-            float landHeight = (landMask - 0.1f) / 0.9f; // Normalize land portion
-            elevation = landHeight * 0.05f; // Base land height above sea level
-            
+            float landHeight = (landMask - config.oceanLevel) / (1.0f - config.oceanLevel); // Normalize
+            elevation = landHeight * (0.03f + config.maxElevation * 0.15f); // Lower base land height
+
             // Add mountains
             float mountainValue = mountainNoise.GetNoise(x * 2.0f, y * 2.0f, z * 2.0f);
-            mountainValue = std::abs(mountainValue); // Ridged mountains
-            if (landHeight > 0.3f) { // Mountains only on stable continental areas
+            mountainValue = std::abs(mountainValue);
+            if (landHeight > 0.3f) {
                 float mountainMask = smoothstep(0.3f, 0.8f, landHeight);
-                elevation += mountainValue * 0.3f * mountainMask;
+                elevation += mountainValue * config.mountainAmplitude * 0.5f * mountainMask; // More pronounced
             }
-            
+
+            // Add valleys (negative mountains)
+            float valleyValue = mountainNoise.GetNoise(-x * 2.0f, -y * 2.0f, -z * 2.0f);
+            valleyValue = std::abs(valleyValue);
+            if (landHeight > 0.2f && landHeight < 0.7f) {
+                float valleyMask = smoothstep(0.2f, 0.7f, landHeight);
+                elevation -= valleyValue * config.mountainAmplitude * 0.2f * valleyMask; // Carve valleys
+            }
+
             // Add hills
             float hillValue = hillNoise.GetNoise(x * 3.0f, y * 3.0f, z * 3.0f);
             hillValue = (hillValue + 1.0f) / 2.0f;
-            if (landHeight > 0.2f && landHeight < 0.7f) {
-                float hillMask = smoothstep(0.2f, 0.7f, landHeight);
-                elevation += hillValue * 0.1f * hillMask;
+            if (landHeight > 0.1f && landHeight < 0.8f) {
+                float hillMask = smoothstep(0.1f, 0.8f, landHeight);
+                elevation += hillValue * config.hillAmplitude * 0.5f * hillMask;
             }
-            
+
             // Add surface details
             float detailValue = detailNoise.GetNoise(x * 8.0f, y * 8.0f, z * 8.0f);
             detailValue = (detailValue + 1.0f) / 2.0f;
-            elevation += detailValue * 0.02f;
-            
+            elevation += detailValue * config.detailAmplitude * 0.5f;
+
             // Ensure minimum land elevation
-            elevation = std::max(elevation, 0.005f);
-            
+            elevation = std::max(elevation, 0.002f);
         } else {
             // OCEAN GENERATION
-            
-            // Ocean depth based on distance from land
-            float oceanDepth = (0.1f - landMask) / 0.1f;
+            float oceanDepth = (config.oceanLevel - landMask) / config.oceanLevel;
             oceanDepth = std::max(0.0f, std::min(1.0f, oceanDepth));
-            
-            // Ocean floor elevation (negative)
-            elevation = -0.02f - (oceanDepth * 0.08f); // Ocean depths from -0.02 to -0.1
-            
+            // Raise ocean floor for rounder look
+            elevation = -0.01f - (oceanDepth * config.maxElevation * 0.08f); // Shallower ocean
+
             // Ocean floor features
             float oceanFloorDetail = detailNoise.GetNoise(x * 4.0f, y * 4.0f, z * 4.0f);
-            elevation += oceanFloorDetail * 0.01f;
-            
-            // Continental shelf - shallower near land
+            elevation += oceanFloorDetail * config.detailAmplitude * 0.3f;
+
+            // Continental shelf
             if (oceanDepth < 0.3f) {
-                elevation += (0.3f - oceanDepth) * 0.03f; // Shallow continental shelf
+                elevation += (0.3f - oceanDepth) * config.maxElevation * 0.03f;
             }
         }
-        
+
         // Clamp final elevation
-        elevation = std::max(elevation, -0.15f);
-        elevation = std::min(elevation, 0.5f);
-        
+        elevation = std::max(elevation, -config.maxElevation * 0.12f);
+        elevation = std::min(elevation, config.maxElevation * 0.5f);
+
         // Displace vertex
         vertices[i] = spherePos * (radius + elevation);
         elevations.push_back(elevation);
     }
-    
+
     calculateNormals();
 }
 

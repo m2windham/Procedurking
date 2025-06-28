@@ -1,4 +1,6 @@
 #pragma once
+#include "Icosphere.h"
+#include "TerrainSampler.h"
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
@@ -142,4 +144,8 @@ private:
     bool canAdvanceToStage(LifeStage nextStage) const;
     float getStageRequirement(LifeStage stage, const std::string& requirement) const;
     void unlockAchievement(const std::string& achievement);
-}; 
+};
+
+// Procedural generation for flora and fauna
+void GenerateProceduralPlants(Icosphere* planet, const TerrainConfig& config);
+void GenerateProceduralAnimals(Icosphere* planet, const TerrainConfig& config); 

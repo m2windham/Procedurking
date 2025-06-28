@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <iostream>
 #include <random>
+#include "Icosphere.h"
+#include "TerrainSampler.h"
 
 PlanetManager::PlanetManager() 
     : timeAcceleration(1.0f), planetAge(0.0f), lifeHasEmerged(false) {
@@ -467,4 +469,52 @@ std::vector<std::string> PlanetManager::getLifeFormDescriptions() const {
     descriptions.push_back("Total Biomass: " + std::to_string(lifeEvolution.getTotalBiomass()));
     
     return descriptions;
+}
+
+// Procedural flora and fauna generation stubs
+void GenerateProceduralPlants(Icosphere* planet, const TerrainConfig& config) {
+    std::cout << "[ProceduralGen] Generating plants..." << std::endl;
+    const auto& verts = planet->getVertices();
+    const auto& elevs = planet->getElevations();
+    std::mt19937 rng(42);
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+    int treeCount = 0, bushCount = 0;
+    for (size_t i = 0; i < verts.size(); ++i) {
+        float elevation = elevs[i];
+        if (elevation > 0.01f && elevation < config.maxElevation * 0.4f) { // Land only
+            float plantChance = dist(rng);
+            if (plantChance > 0.995f) {
+                // Place a tree
+                ++treeCount;
+            } else if (plantChance > 0.99f) {
+                // Place a bush
+                ++bushCount;
+            }
+        }
+    }
+    std::cout << "Placed " << treeCount << " trees and " << bushCount << " bushes." << std::endl;
+}
+
+void GenerateProceduralAnimals(Icosphere* planet, const TerrainConfig& config) {
+    std::cout << "[ProceduralGen] Generating animals..." << std::endl;
+    const auto& verts = planet->getVertices();
+    const auto& elevs = planet->getElevations();
+    std::mt19937 rng(1337);
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+    int herdCount = 0, animalCount = 0;
+    for (size_t i = 0; i < verts.size(); ++i) {
+        float elevation = elevs[i];
+        if (elevation > 0.02f && elevation < config.maxElevation * 0.3f) { // Favor plains/low hills
+            float animalChance = dist(rng);
+            if (animalChance > 0.999f) {
+                // Place a herd
+                ++herdCount;
+                animalCount += 10 + (int)(dist(rng) * 20); // 10-30 animals per herd
+            } else if (animalChance > 0.997f) {
+                // Place a lone animal
+                ++animalCount;
+            }
+        }
+    }
+    std::cout << "Placed " << herdCount << " herds and " << animalCount << " animals." << std::endl;
 } 

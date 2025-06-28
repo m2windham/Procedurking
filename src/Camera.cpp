@@ -43,9 +43,9 @@ void Camera::ProcessKeyboard(Camera_Movement direction, float deltaTime)
         glm::vec3 right = glm::normalize(glm::cross(surfaceNormal, forward));
         
         if (direction == FORWARD)
-            Position += forward * velocity;
-        if (direction == BACKWARD)
             Position -= forward * velocity;
+        if (direction == BACKWARD)
+            Position += forward * velocity;
         if (direction == LEFT)
             Position -= right * velocity;
         if (direction == RIGHT)
