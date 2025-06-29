@@ -4,6 +4,8 @@
 #include <random>
 #include "Icosphere.h"
 #include "TerrainSampler.h"
+#include <array>
+#include <tuple>
 
 PlanetManager::PlanetManager() 
     : timeAcceleration(1.0f), planetAge(0.0f), lifeHasEmerged(false) {
@@ -472,6 +474,74 @@ std::vector<std::string> PlanetManager::getLifeFormDescriptions() const {
 }
 
 // Procedural flora and fauna generation stubs
+
+// Plant section types
+enum class PlantSectionType {
+    ROOT,
+    STEM,
+    LEAF,
+    FLOWER,
+    FRUIT,
+    BRANCH,
+    SEED,
+    OTHER
+};
+
+struct PlantSection {
+    PlantSectionType type;
+    float length; // For stem/root/branch
+    float width;  // For leaf/flower/fruit
+    glm::vec3 color;
+    std::string description;
+};
+
+struct Plant {
+    std::vector<PlantSection> sections;
+    glm::vec3 position;
+    float height;
+    std::string speciesName;
+};
+
+static Plant GenerateRandomPlant(const glm::vec3& position, std::mt19937& rng) {
+    std::uniform_real_distribution<float> lenDist(0.1f, 2.0f);
+    std::uniform_real_distribution<float> widDist(0.05f, 0.5f);
+    std::uniform_int_distribution<int> flowerChance(0, 3); // 25% chance for flower
+    std::uniform_int_distribution<int> fruitChance(0, 4);  // 20% chance for fruit
+    std::uniform_int_distribution<int> branchCountDist(0, 2);
+    std::uniform_int_distribution<int> leafCountDist(2, 8);
+    std::uniform_int_distribution<int> colorDist(0, 2);
+    std::array<glm::vec3, 3> leafColors = { glm::vec3(0.2f, 0.7f, 0.2f), glm::vec3(0.4f, 0.8f, 0.3f), glm::vec3(0.1f, 0.5f, 0.1f) };
+    std::array<glm::vec3, 3> flowerColors = { glm::vec3(1.0f, 0.8f, 0.9f), glm::vec3(1.0f, 1.0f, 0.5f), glm::vec3(0.9f, 0.5f, 1.0f) };
+    std::array<glm::vec3, 3> fruitColors = { glm::vec3(1.0f, 0.3f, 0.2f), glm::vec3(1.0f, 0.7f, 0.2f), glm::vec3(0.7f, 0.3f, 0.1f) };
+    Plant plant;
+    plant.position = position;
+    plant.height = lenDist(rng) + 0.5f;
+    plant.speciesName = "ProceduralPlant";
+    // Root
+    plant.sections.push_back({ PlantSectionType::ROOT, lenDist(rng), widDist(rng), glm::vec3(0.5f, 0.3f, 0.1f), "Root" });
+    // Stem
+    plant.sections.push_back({ PlantSectionType::STEM, plant.height, widDist(rng), glm::vec3(0.3f, 0.2f, 0.1f), "Stem" });
+    // Branches
+    int branchCount = branchCountDist(rng);
+    for (int b = 0; b < branchCount; ++b) {
+        plant.sections.push_back({ PlantSectionType::BRANCH, lenDist(rng), widDist(rng), glm::vec3(0.3f, 0.2f, 0.1f), "Branch" });
+    }
+    // Leaves
+    int leafCount = leafCountDist(rng);
+    for (int l = 0; l < leafCount; ++l) {
+        plant.sections.push_back({ PlantSectionType::LEAF, lenDist(rng) * 0.3f, widDist(rng), leafColors[colorDist(rng)], "Leaf" });
+    }
+    // Flower (optional)
+    if (flowerChance(rng) == 0) {
+        plant.sections.push_back({ PlantSectionType::FLOWER, widDist(rng), widDist(rng), flowerColors[colorDist(rng)], "Flower" });
+    }
+    // Fruit (optional)
+    if (fruitChance(rng) == 0) {
+        plant.sections.push_back({ PlantSectionType::FRUIT, widDist(rng), widDist(rng), fruitColors[colorDist(rng)], "Fruit" });
+    }
+    return plant;
+}
+
 void GenerateProceduralPlants(Icosphere* planet, const TerrainConfig& config) {
     std::cout << "[ProceduralGen] Generating plants..." << std::endl;
     const auto& verts = planet->getVertices();
@@ -479,20 +549,29 @@ void GenerateProceduralPlants(Icosphere* planet, const TerrainConfig& config) {
     std::mt19937 rng(42);
     std::uniform_real_distribution<float> dist(0.0f, 1.0f);
     int treeCount = 0, bushCount = 0;
+    std::vector<Plant> allPlants;
     for (size_t i = 0; i < verts.size(); ++i) {
         float elevation = elevs[i];
         if (elevation > 0.01f && elevation < config.maxElevation * 0.4f) { // Land only
             float plantChance = dist(rng);
             if (plantChance > 0.995f) {
                 // Place a tree
+                Plant plant = GenerateRandomPlant(verts[i], rng);
+                plant.speciesName = "Tree";
+                allPlants.push_back(plant);
                 ++treeCount;
             } else if (plantChance > 0.99f) {
-                // Place a bush
+                // Place a bush (smaller, fewer sections)
+                Plant plant = GenerateRandomPlant(verts[i], rng);
+                plant.speciesName = "Bush";
+                if (plant.sections.size() > 4) plant.sections.resize(4); // Shrub-like
+                allPlants.push_back(plant);
                 ++bushCount;
             }
         }
     }
     std::cout << "Placed " << treeCount << " trees and " << bushCount << " bushes." << std::endl;
+    std::cout << "Total plants: " << allPlants.size() << std::endl;
 }
 
 void GenerateProceduralAnimals(Icosphere* planet, const TerrainConfig& config) {

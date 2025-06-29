@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include "LifeForm.h"
+#include <random>
 
 enum class ElementType {
     WATER,          // Essential for life
@@ -37,6 +38,18 @@ enum class ClimateZone {
     TROPICAL,       // Warm and humid
     DESERT,         // Hot and dry
     OCEANIC         // Water-dominated
+};
+
+// Plant section types
+enum class PlantSectionType {
+    ROOT,
+    STEM,
+    LEAF,
+    FLOWER,
+    FRUIT,
+    BRANCH,
+    SEED,
+    OTHER
 };
 
 struct Element {
@@ -76,6 +89,21 @@ struct LifeProgress {
     float intelligence;     // 0.0 to 1.0
     float technology;       // 0.0 to 1.0
     std::vector<std::string> achievements;
+};
+
+struct PlantSection {
+    PlantSectionType type;
+    float length;
+    float width;
+    glm::vec3 color;
+    std::string description;
+};
+
+struct Plant {
+    std::vector<PlantSection> sections;
+    glm::vec3 position;
+    float height;
+    std::string speciesName;
 };
 
 class PlanetManager {
@@ -148,4 +176,6 @@ private:
 
 // Procedural generation for flora and fauna
 void GenerateProceduralPlants(Icosphere* planet, const TerrainConfig& config);
-void GenerateProceduralAnimals(Icosphere* planet, const TerrainConfig& config); 
+void GenerateProceduralAnimals(Icosphere* planet, const TerrainConfig& config);
+
+Plant GenerateRandomPlant(const glm::vec3& position, std::mt19937& rng); 
